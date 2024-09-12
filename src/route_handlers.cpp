@@ -49,6 +49,20 @@ void handleLogin(AsyncWebServerRequest *request)
   }
 }
 
+// void handleHome(AsyncWebServerRequest *request)
+// {
+//   if (!SPIFFS.exists("/index.html"))
+//   {
+//     request->send(404, "text/html", "File not found");
+//   }
+//   else
+//   {
+//     AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
+//     response->addHeader("Access-Control-Allow-Origin", "*");
+//     request->send(response);
+//   }
+// }
+
 void handleHome(AsyncWebServerRequest *request)
 {
   if (!SPIFFS.exists("/index.html"))
@@ -57,9 +71,7 @@ void handleHome(AsyncWebServerRequest *request)
   }
   else
   {
-    AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
-    response->addHeader("Access-Control-Allow-Origin", "*");
-    request->send(response);
+    request->send(SPIFFS, "/index.html", "text/html");
   }
 }
 
@@ -317,16 +329,34 @@ void configureRoutes(AsyncWebServer &server)
     response->addHeader("Access-Control-Allow-Origin", "*");
     request->send(response); });
 
+  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  //           {
+  //   if (!SPIFFS.exists("/index.html")) {
+  //     request->send(404, "text/html", "File not found");
+  //   } else {
+  //     AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
+  //     response->addHeader("Access-Control-Allow-Origin", "*");
+  //     request->send(response);
+  //   } });
+  // Servir index.html
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     if (!SPIFFS.exists("/index.html")) {
-      request->send(404, "text/html", "File not found");
+        request->send(404, "text/html", "File not found");
     } else {
-      AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
-      response->addHeader("Access-Control-Allow-Origin", "*");
-      request->send(response);
+        AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(response);
     } });
 
+  // Página principal
+  server.on("/", HTTP_GET, handleHome);
+
+  // Servir archivos estáticos desde la carpeta /assets/
+  // server.serveStatic("/assets/", SPIFFS, "/assets/").setDefaultFile("index.html").setCacheControl("max-age=600");
+  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+
+  // Rutas API
   server.on("/api/login", HTTP_POST, handleLogin);
   server.on("/api/factory-reset", HTTP_POST, handleFactoryReset);
   server.on("/api/set/wifi", HTTP_POST, handleSetWiFi);
@@ -335,7 +365,6 @@ void configureRoutes(AsyncWebServer &server)
   server.on("/api/set/tower-info", HTTP_POST, handleSetTowerInfo);
   server.on("/api/get/tower-info", HTTP_GET, handleGetTowerInfo);
   server.on("/api/led", HTTP_POST, handleToggleLed);
-
   // CORS preflight requests
   server.on("/api/set/tower-info", HTTP_OPTIONS, [](AsyncWebServerRequest *request)
             {
