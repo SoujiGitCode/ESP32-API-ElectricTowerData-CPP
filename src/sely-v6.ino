@@ -12,6 +12,12 @@
 #include "LoadCells.h"
 #include "nvs_flash.h"
 Ticker restartTimer;
+
+// Variables de Acceso
+const char *username = "admin";
+const char *loginPassword = "root";
+const char *ADMIN_PASSWORD = "3669225";
+
 // Declaramos el pin que encendera
 int ledPin = 2;
 

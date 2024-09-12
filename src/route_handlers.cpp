@@ -7,9 +7,9 @@
 #include "CellsCalibrationFactors.h"
 #include <Ticker.h>
 
-const char *username = "admin";
-const char *loginPassword = "root";
-const char *const ADMIN_PASSWORD = "3669225";
+extern const char *username;
+extern const char *loginPassword;
+extern const char *ADMIN_PASSWORD;
 // pin que encendera definido en el
 extern int ledPin;
 extern Config config;                 // exporting config object
@@ -22,19 +22,30 @@ void handleLogin(AsyncWebServerRequest *request)
   {
     String inputUsername = request->getParam("username", true)->value();
     String inputPassword = request->getParam("password", true)->value();
+
+    // Preparar la respuesta
+    String jsonResponse;
+
     if (inputUsername == username && inputPassword == loginPassword)
     {
-      // Redirect to /dashboard
-      request->redirect("/dashboard");
+      jsonResponse = "{\"status\": \"success\", \"message\": \"Login successful\"}";
     }
     else
     {
-      request->send(401, "text/html", "<html><body><h1>Unauthorized</h1></body></html>");
+      jsonResponse = "{\"status\": \"error\", \"message\": \"Unauthorized\"}";
     }
+
+    // Enviar la respuesta con encabezado CORS
+    AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonResponse);
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
   }
   else
   {
-    request->send(400, "text/html", "<html><body><h1>Bad Request</h1></body></html>");
+    String jsonResponse = "{\"status\": \"error\", \"message\": \"Bad Request, missing username or password\"}";
+    AsyncWebServerResponse *resp = request->beginResponse(400, "application/json", jsonResponse);
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
   }
 }
 
@@ -46,188 +57,203 @@ void handleHome(AsyncWebServerRequest *request)
   }
   else
   {
-    request->send(SPIFFS, "/index.html", "text/html");
+    AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(response);
   }
 }
-
-// API FUNCTIONS //
 
 // Factory Reset
 void handleFactoryReset(AsyncWebServerRequest *request)
 {
   if (request->method() == HTTP_POST)
   {
-    // Verificar si el parámetro admin_password está presente y es correcto
     if (!request->hasParam("admin_password", true) || request->getParam("admin_password", true)->value() != ADMIN_PASSWORD)
     {
-      Serial.println("Invalid admin password");
-      request->send(401, "application/json", "{\"status\": \"error\", \"message\": \"Invalid admin password\"}");
+      AsyncWebServerResponse *resp = request->beginResponse(401, "application/json", "{\"status\": \"error\", \"message\": \"Contraseña de Administrador Incorrecta\"}");
+      resp->addHeader("Access-Control-Allow-Origin", "*");
+      request->send(resp);
       return;
     }
-    Serial.println("Admin password validated");
 
-    // Llamar a la función que resetea a los valores de fábrica
+    // Ejecutar el reset a valores de fábrica
     config.resetToFactoryDefaults();
 
-    // Reiniciar el dispositivo en 2 segundos
+    // Reiniciar el dispositivo después de 2 segundos
     restartTimer.once(2, []()
                       { ESP.restart(); });
 
-    // Responder con un mensaje de éxito
-    request->send(200, "application/json", "{\"message\": \"Successfully reset to factory defaults\"}");
+    // Enviar respuesta de éxito con status y mensaje
+    AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"status\": \"success\", \"message\": \"Dispositivo Reiniciado a valores de fabrica\"}");
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
   }
   else
   {
-    request->send(405, "application/json", "{\"message\": \"Method not allowed\"}");
+    // Responder con error si el método no es POST
+    AsyncWebServerResponse *resp = request->beginResponse(405, "application/json", "{\"status\": \"error\", \"message\": \"Method not allowed\"}");
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
   }
 }
 
 void handleSetWiFi(AsyncWebServerRequest *request)
 {
-
   if (request->hasParam("ssid", true) && request->hasParam("password", true))
   {
     String ssid = request->getParam("ssid", true)->value();
     String password = request->getParam("password", true)->value();
-    Serial.println("handleSetWifi params");
-    Serial.println(ssid);
-    Serial.println(password);
-    // Comprueba la longitud del ssid y la contraseña
+
     if (!ssid.isEmpty() && password.length() >= 8 && password.length() <= 63)
     {
-
-      Serial.println("params are okay!");
       config.setSsid(ssid.c_str());
       config.setPassword(password.c_str());
-      request->send(200, "text/plain", "Configuración WiFi guardada");
-      // Programa el dispositivo para reiniciar en 1 segundo
+
+      String jsonResponse = "{\"status\": \"success\", \"message\": \"Configuración WiFi guardada exitosamente\"}";
+      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", jsonResponse);
+      resp->addHeader("Access-Control-Allow-Origin", "*");
+      request->send(resp);
+
+      // Reiniciar el dispositivo en 0.1 segundos
       restartTimer.once(0.1, []()
                         { ESP.restart(); });
     }
     else
     {
-      request->send(400, "text/plain", "SSID vacío o longitud de contraseña inválida");
+      String jsonResponse = "{\"status\": \"error\", \"message\": \"SSID vacío o longitud de contraseña inválida\"}";
+      AsyncWebServerResponse *resp = request->beginResponse(400, "application/json", jsonResponse);
+      resp->addHeader("Access-Control-Allow-Origin", "*");
+      request->send(resp);
     }
   }
   else
   {
-    request->send(400, "text/plain", "Parametros incorrectos");
+    String jsonResponse = "{\"status\": \"error\", \"message\": \"Parámetros incorrectos\"}";
+    AsyncWebServerResponse *resp = request->beginResponse(400, "application/json", jsonResponse);
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
   }
 }
 
 void handleSetCells(AsyncWebServerRequest *request)
 {
-  Serial.println("handleSetCells Called");
-
   // Verificar si el parámetro admin_password está presente y es correcto
   if (!request->hasParam("admin_password", true) || request->getParam("admin_password", true)->value() != ADMIN_PASSWORD)
   {
-    request->send(401, "application/json", "{\"status\": \"error\", \"message\": \"Invalid admin password\"}");
+    String errorResponse = "{\"status\": \"error\", \"message\": \"Contraseña de administrador incorrecta\"}";
+    AsyncWebServerResponse *resp = request->beginResponse(401, "application/json", errorResponse);
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
     return;
   }
-  Serial.println("Admin password validated");
 
-  // Verificar si los valores de las celdas están presentes (ahora todos son obligatorios)
+  // Verificar los parámetros
   AsyncWebParameter *p1 = request->getParam("first_cell", true);
   AsyncWebParameter *p2 = request->getParam("second_cell", true);
   AsyncWebParameter *p3 = request->getParam("third_cell", true);
   AsyncWebParameter *p4 = request->getParam("fourth_cell", true);
-  AsyncWebParameter *r1 = request->getParam("first_read_1", true); // Obligatorio
-  AsyncWebParameter *r2 = request->getParam("first_read_2", true); // Obligatorio
-  AsyncWebParameter *r3 = request->getParam("first_read_3", true); // Obligatorio
-  AsyncWebParameter *r4 = request->getParam("first_read_4", true); // Obligatorio
+  AsyncWebParameter *r1 = request->getParam("first_read_1", true);
+  AsyncWebParameter *r2 = request->getParam("first_read_2", true);
+  AsyncWebParameter *r3 = request->getParam("first_read_3", true);
+  AsyncWebParameter *r4 = request->getParam("first_read_4", true);
 
-  // Verificar si los parámetros de las celdas están presentes
+  // Validar si faltan parámetros
   if (p1 == NULL || p2 == NULL || p3 == NULL || p4 == NULL || r1 == NULL || r2 == NULL || r3 == NULL || r4 == NULL)
   {
-    request->send(400, "application/json", "{\"status\": \"error\", \"message\": \"One or more required parameters not provided\"}");
+    String errorResponse = "{\"status\": \"error\", \"message\": \"One or more required parameters not provided\"}";
+    AsyncWebServerResponse *resp = request->beginResponse(400, "application/json", errorResponse);
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
     return;
   }
 
-  // Convertir los valores de los parámetros a tipo String
-  String first_cell = p1->value();
-  String second_cell = p2->value();
-  String third_cell = p3->value();
-  String fourth_cell = p4->value();
-  String first_read_1 = r1->value();
-  String first_read_2 = r2->value();
-  String first_read_3 = r3->value();
-  String first_read_4 = r4->value();
+  // Actualizar valores de las celdas
+  Cells.set_first_cell(p1->value().toDouble());
+  Cells.set_second_cell(p2->value().toDouble());
+  Cells.set_third_cell(p3->value().toDouble());
+  Cells.set_fourth_cell(p4->value().toDouble());
+  Cells.set_first_read_1(r1->value().toDouble());
+  Cells.set_first_read_2(r2->value().toDouble());
+  Cells.set_first_read_3(r3->value().toDouble());
+  Cells.set_first_read_4(r4->value().toDouble());
 
-  // Configurar los valores de las celdas
-  Cells.set_first_cell(first_cell.toDouble());
-  Cells.set_second_cell(second_cell.toDouble());
-  Cells.set_third_cell(third_cell.toDouble());
-  Cells.set_fourth_cell(fourth_cell.toDouble());
+  // Construir respuesta de éxito
+  String successResponse = "{\"status\": \"success\", \"message\": \"Cells configuration saved successfully\", \"data\": {";
+  successResponse += "\"first_cell\": \"" + String(p1->value()) + "\", ";
+  successResponse += "\"second_cell\": \"" + String(p2->value()) + "\", ";
+  successResponse += "\"third_cell\": \"" + String(p3->value()) + "\", ";
+  successResponse += "\"fourth_cell\": \"" + String(p4->value()) + "\", ";
+  successResponse += "\"first_read_1\": \"" + String(Cells.get_first_read_1(), 2) + "\", ";
+  successResponse += "\"first_read_2\": \"" + String(Cells.get_first_read_2(), 2) + "\", ";
+  successResponse += "\"first_read_3\": \"" + String(Cells.get_first_read_3(), 2) + "\", ";
+  successResponse += "\"first_read_4\": \"" + String(Cells.get_first_read_4(), 2) + "\"";
+  successResponse += "}}";
 
-  // Configurar los valores de las primeras lecturas
-  Cells.set_first_read_1(first_read_1.toDouble());
-  Cells.set_first_read_2(first_read_2.toDouble());
-  Cells.set_first_read_3(first_read_3.toDouble());
-  Cells.set_first_read_4(first_read_4.toDouble());
+  // Enviar respuesta de éxito
+  AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", successResponse);
+  resp->addHeader("Access-Control-Allow-Origin", "*");
+  request->send(resp);
+}
 
-  // Respuesta JSON con los valores de las celdas y las primeras lecturas
+void handleGetCells(AsyncWebServerRequest *request)
+{
+  double first_cell = Cells.get_first_cell();
+  double second_cell = Cells.get_second_cell();
+  double third_cell = Cells.get_third_cell();
+  double fourth_cell = Cells.get_fourth_cell();
+
   String response = "{\"status\": \"success\", \"data\": {";
-  response += "\"first_cell\": \"" + String(first_cell) + "\", ";
-  response += "\"second_cell\": \"" + String(second_cell) + "\", ";
-  response += "\"third_cell\": \"" + String(third_cell) + "\", ";
-  response += "\"fourth_cell\": \"" + String(fourth_cell) + "\", ";
+  response += "\"first_cell\": \"" + String(first_cell, 2) + "\", ";
+  response += "\"second_cell\": \"" + String(second_cell, 2) + "\", ";
+  response += "\"third_cell\": \"" + String(third_cell, 2) + "\", ";
+  response += "\"fourth_cell\": \"" + String(fourth_cell, 2) + "\", ";
   response += "\"first_read_1\": \"" + String(Cells.get_first_read_1(), 2) + "\", ";
   response += "\"first_read_2\": \"" + String(Cells.get_first_read_2(), 2) + "\", ";
   response += "\"first_read_3\": \"" + String(Cells.get_first_read_3(), 2) + "\", ";
   response += "\"first_read_4\": \"" + String(Cells.get_first_read_4(), 2) + "\"";
   response += "}}";
 
-  // Enviar respuesta
-  request->send(200, "application/json", response);
-}
-
-void handleGetCells(AsyncWebServerRequest *request)
-{
-  // Obtener los valores de las celdas y las primeras lecturas
-  String response = "{\"status\": \"success\", \"data\": {";
-  response += "\"first_cell\": " + String(Cells.get_first_cell(), 2) + ", ";
-  response += "\"second_cell\": " + String(Cells.get_second_cell(), 2) + ", ";
-  response += "\"third_cell\": " + String(Cells.get_third_cell(), 2) + ", ";
-  response += "\"fourth_cell\": " + String(Cells.get_fourth_cell(), 2) + ", ";
-  response += "\"first_read_1\": " + String(Cells.get_first_read_1(), 2) + ", ";
-  response += "\"first_read_2\": " + String(Cells.get_first_read_2(), 2) + ", ";
-  response += "\"first_read_3\": " + String(Cells.get_first_read_3(), 2) + ", ";
-  response += "\"first_read_4\": " + String(Cells.get_first_read_4(), 2);
-  response += "}}";
-
-  // Enviar la respuesta
-  request->send(200, "application/json", response);
+  AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
+  resp->addHeader("Access-Control-Allow-Origin", "*");
+  request->send(resp);
 }
 
 void handleGetTowerInfo(AsyncWebServerRequest *request)
 {
   TowerInfo towerInfo = config.getTowerInfo();
-  String response = serializeTowerInfo(towerInfo); // Utiliza la función serializeTowerInfo
-  request->send(200, "application/json", response);
+
+  String response = "{\"status\": \"success\", \"message\": \"Tower info retrieved successfully\", \"data\": {";
+  response += "\"id\": \"" + towerInfo.id + "\", ";
+  response += "\"name\": \"" + towerInfo.name + "\", ";
+  response += "\"slang\": \"" + towerInfo.slang + "\", ";
+  response += "\"location\": \"" + towerInfo.location + "\", ";
+  response += "\"priority\": " + String(towerInfo.priority) + ", ";
+  response += "\"type\": \"" + towerInfo.type + "\", ";
+  response += "\"loadcells_amount\": " + String(towerInfo.loadcells_amount);
+  response += "}}";
+
+  AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
+  resp->addHeader("Access-Control-Allow-Origin", "*");
+  request->send(resp);
 }
 
 void handleSetTowerInfo(AsyncWebServerRequest *request)
 {
-  Serial.println("handleSetTowerInfo Called");
-
-  // Verificar si el parámetro admin_password está presente y es correcto
   if (!request->hasParam("admin_password", true))
   {
-    Serial.println("Admin password parameter missing");
-    request->send(401, "application/json", "{\"status\": \"error\", \"message\": \"Admin password missing\"}");
+    AsyncWebServerResponse *resp = request->beginResponse(401, "application/json", "{\"status\": \"error\", \"message\": \"Falta contraseña de Administrador\"}");
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
     return;
   }
   else if (request->getParam("admin_password", true)->value() != ADMIN_PASSWORD)
   {
-    Serial.println("Invalid admin password");
-    request->send(401, "application/json", "{\"status\": \"error\", \"message\": \"Invalid admin password\"}");
+    AsyncWebServerResponse *resp = request->beginResponse(401, "application/json", "{\"status\": \"error\", \"message\": \"Contraseña de administrador incorrecta\"}");
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
     return;
   }
 
-  Serial.println("Admin password validated");
-
-  // Continuar con la verificación de otros parámetros y asignar valores predeterminados si no están presentes
   TowerInfo towerInfo;
 
   towerInfo.id = request->hasParam("id", true) ? request->getParam("id", true)->value() : "";
@@ -238,49 +264,70 @@ void handleSetTowerInfo(AsyncWebServerRequest *request)
   towerInfo.type = request->hasParam("type", true) ? request->getParam("type", true)->value() : "";
   towerInfo.loadcells_amount = request->hasParam("loadcells_amount", true) ? request->getParam("loadcells_amount", true)->value().toInt() : 0;
 
-  // Guardar la información en las preferencias
   config.setTowerInfo(towerInfo);
 
-  // Construir y enviar respuesta JSON
   String response = "{\"status\": \"success\", \"message\": \"Tower info updated successfully\", \"data\": ";
   response += serializeTowerInfo(towerInfo);
   response += "}";
-  Serial.println("Response: " + response);
 
-  request->send(200, "application/json", response);
+  AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", response);
+  resp->addHeader("Access-Control-Allow-Origin", "*");
+  request->send(resp);
 }
 
 void handleToggleLed(AsyncWebServerRequest *request)
 {
-  // Comprobar si se pasó el parámetro "led" en el form-data
   if (request->hasParam("led", true))
   {
     String ledState = request->getParam("led", true)->value();
     if (ledState == "true")
     {
-      digitalWrite(ledPin, HIGH); // Enciende el LED
-      request->send(200, "application/json", "{\"status\": \"success\", \"message\": \"LED encendido\"}");
+      digitalWrite(ledPin, HIGH);
+      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"status\": \"success\", \"message\": \"LED encendido\"}");
+      resp->addHeader("Access-Control-Allow-Origin", "*");
+      request->send(resp);
     }
     else if (ledState == "false")
     {
-      digitalWrite(ledPin, LOW); // Apaga el LED
-      request->send(200, "application/json", "{\"status\": \"success\", \"message\": \"LED apagado\"}");
+      digitalWrite(ledPin, LOW);
+      AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"status\": \"success\", \"message\": \"LED apagado\"}");
+      resp->addHeader("Access-Control-Allow-Origin", "*");
+      request->send(resp);
     }
     else
     {
-      request->send(400, "application/json", "{\"status\": \"error\", \"message\": \"Parámetro 'led' inválido\"}");
+      AsyncWebServerResponse *resp = request->beginResponse(400, "application/json", "{\"status\": \"error\", \"message\": \"Parámetro 'led' inválido\"}");
+      resp->addHeader("Access-Control-Allow-Origin", "*");
+      request->send(resp);
     }
   }
   else
   {
-    request->send(400, "application/json", "{\"status\": \"error\", \"message\": \"Falta el parámetro 'led'\"}");
+    AsyncWebServerResponse *resp = request->beginResponse(400, "application/json", "{\"status\": \"error\", \"message\": \"Falta el parámetro 'led'\"}");
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(resp);
   }
 }
 
 void configureRoutes(AsyncWebServer &server)
 {
-  server.on("/", HTTP_GET, handleHome);
-  // API ROUTES //
+  server.onNotFound([](AsyncWebServerRequest *request)
+                    {
+    AsyncWebServerResponse *response = request->beginResponse(404, "application/json", "{\"message\":\"Not Found\"}");
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(response); });
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    if (!SPIFFS.exists("/index.html")) {
+      request->send(404, "text/html", "File not found");
+    } else {
+      AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/index.html", "text/html");
+      response->addHeader("Access-Control-Allow-Origin", "*");
+      request->send(response);
+    } });
+
+  server.on("/api/login", HTTP_POST, handleLogin);
   server.on("/api/factory-reset", HTTP_POST, handleFactoryReset);
   server.on("/api/set/wifi", HTTP_POST, handleSetWiFi);
   server.on("/api/set/cells", HTTP_POST, handleSetCells);
@@ -289,5 +336,12 @@ void configureRoutes(AsyncWebServer &server)
   server.on("/api/get/tower-info", HTTP_GET, handleGetTowerInfo);
   server.on("/api/led", HTTP_POST, handleToggleLed);
 
-  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+  // CORS preflight requests
+  server.on("/api/set/tower-info", HTTP_OPTIONS, [](AsyncWebServerRequest *request)
+            {
+    AsyncWebServerResponse *response = request->beginResponse(200);
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    response->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    request->send(response); });
 }
