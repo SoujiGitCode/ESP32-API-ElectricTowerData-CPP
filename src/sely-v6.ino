@@ -127,11 +127,42 @@ void loadCellReadingTask(void *pvParameters)
 {
   for (;;)
   {
-    // Llama al método `update()` para cada celda de carga aquí
-    first_cell._loadCells[0]->update();
-    second_cell._loadCells[0]->update();
-    third_cell._loadCells[0]->update();
-    fourth_cell._loadCells[0]->update();
+
+    if (first_cell._loadCells[0] == nullptr)
+    {
+      Serial.println('celda 1 no existe');
+    }
+    if (second_cell._loadCells[0] == nullptr)
+    {
+      Serial.println('celda 2 no existe');
+    }
+    if (third_cell._loadCells[0] == nullptr)
+    {
+      Serial.println('celda 3 no existe');
+    }
+    if (fourth_cell._loadCells[0] == nullptr)
+    {
+      Serial.println('celda 4 no existe');
+    }
+
+    // Verificar que los punteros no sean nulos antes de usar el método update()
+    if (first_cell._loadCells[0] != nullptr)
+    {
+      first_cell._loadCells[0]->update();
+    }
+    if (second_cell._loadCells[0] != nullptr)
+    {
+      second_cell._loadCells[0]->update();
+    }
+    if (third_cell._loadCells[0] != nullptr)
+    {
+      third_cell._loadCells[0]->update();
+    }
+    if (fourth_cell._loadCells[0] != nullptr)
+    {
+      fourth_cell._loadCells[0]->update();
+    }
+
     vTaskDelay(100 / portTICK_PERIOD_MS);
     updateLoadCellReadings();
   }
@@ -212,9 +243,10 @@ void setup()
   initializeLoadCellsCheck(fourth_cell, fourth_cellParams);
 
   // DEfinicion de tareas en nucleo 0 y 1
-  // xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 1, &Task1, 1);
+  xTaskCreatePinnedToCore(Task1code, "Task1", 20000, NULL, 1, &Task1, 1);
 
   // xTaskCreatePinnedToCore(loadCellReadingTask, "LoadCellReadingTask", 10000, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(loadCellReadingTask, "LoadCellReadingTask", 20000, NULL, 1, NULL, 0);
 }
 void loop()
 {

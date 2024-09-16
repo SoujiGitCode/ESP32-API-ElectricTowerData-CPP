@@ -16,10 +16,10 @@ void CellsCalibrationFactors::initializePreferences()
     {
         Serial.println("Setting default values for cells...");
 
-        preferences.putDouble("first_cell", 99.0);
-        preferences.putDouble("second_cell", 99.0);
-        preferences.putDouble("third_cell", 99.0);
-        preferences.putDouble("fourth_cell", 99.0);
+        preferences.putDouble("cell_1", 99.0);
+        preferences.putDouble("cell_2", 99.0);
+        preferences.putDouble("cell_3", 99.0);
+        preferences.putDouble("cell_4", 99.0);
 
         // Inicializar first_read_* con valores predeterminados
         preferences.putDouble("first_read_1", 2.0);
@@ -45,64 +45,64 @@ void CellsCalibrationFactors::noMoreFactoryValues()
     preferences.end();
 }
 
-void CellsCalibrationFactors::set_first_cell(double first_cell)
+void CellsCalibrationFactors::set_first_cell(double cell_1)
 {
     preferences.begin("cells_Namespace", false);
-    preferences.putDouble("first_cell", first_cell);
+    preferences.putDouble("cell_1", cell_1);
     preferences.end();
 }
 
 double CellsCalibrationFactors::get_first_cell()
 {
     preferences.begin("cells_Namespace", false);
-    double first_cell = preferences.getDouble("first_cell", 0.0);
+    double cell_1 = preferences.getDouble("cell_1", 0.0);
     preferences.end();
-    return first_cell;
+    return cell_1;
 }
 
-void CellsCalibrationFactors::set_second_cell(double second_cell)
+void CellsCalibrationFactors::set_second_cell(double cell_2)
 {
     preferences.begin("cells_Namespace", false);
-    preferences.putDouble("second_cell", second_cell);
+    preferences.putDouble("cell_2", cell_2);
     preferences.end();
 }
 
 double CellsCalibrationFactors::get_second_cell()
 {
     preferences.begin("cells_Namespace", false);
-    double second_cell = preferences.getDouble("second_cell", 0.0);
+    double cell_2 = preferences.getDouble("cell_2", 0.0);
     preferences.end();
-    return second_cell;
+    return cell_2;
 }
 
-void CellsCalibrationFactors::set_third_cell(double third_cell)
+void CellsCalibrationFactors::set_third_cell(double cell_3)
 {
     preferences.begin("cells_Namespace", false);
-    preferences.putDouble("third_cell", third_cell);
+    preferences.putDouble("cell_3", cell_3);
     preferences.end();
 }
 
 double CellsCalibrationFactors::get_third_cell()
 {
     preferences.begin("cells_Namespace", false);
-    double third_cell = preferences.getDouble("third_cell", 0.0);
+    double cell_3 = preferences.getDouble("cell_3", 0.0);
     preferences.end();
-    return third_cell;
+    return cell_3;
 }
 
-void CellsCalibrationFactors::set_fourth_cell(double fourth_cell)
+void CellsCalibrationFactors::set_fourth_cell(double cell_4)
 {
     preferences.begin("cells_Namespace", false);
-    preferences.putDouble("fourth_cell", fourth_cell);
+    preferences.putDouble("cell_4", cell_4);
     preferences.end();
 }
 
 double CellsCalibrationFactors::get_fourth_cell()
 {
     preferences.begin("cells_Namespace", false);
-    double fourth_cell = preferences.getDouble("fourth_cell", 0.0);
+    double cell_4 = preferences.getDouble("cell_4", 0.0);
     preferences.end();
-    return fourth_cell;
+    return cell_4;
 }
 
 // Nuevos métodos para first_read_*

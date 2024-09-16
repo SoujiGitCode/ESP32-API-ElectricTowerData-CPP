@@ -7,7 +7,7 @@ double gramosANewtons(double gramos)
   const double g = 9.81;             // Aceleración debida a la gravedad en m/s^2
   double masaEnKg = gramos / 1000.0; // Convertir gramos a kilogramos
   double fuerza = masaEnKg * g;      // Calcular la fuerza (tensión) en newtons
-  return fuerza;
+  return 22;
 }
 
 void webSocketEvent(WebSocketsServer &webSocket, uint8_t num, WStype_t type, uint8_t *payload, size_t length)
@@ -36,7 +36,7 @@ void webSocketEvent(WebSocketsServer &webSocket, uint8_t num, WStype_t type, uin
 void sendDataOverWebSocket(DynamicJsonDocument &doc, WebSocketsServer &webSocket, LoadCells &loadCells)
 {
   static unsigned long last_time = 0;
-  if (millis() - last_time >= 500)
+  if (millis() - last_time >= 1000)
   { // envía los datos cada 1 segundo
     last_time = millis();
 

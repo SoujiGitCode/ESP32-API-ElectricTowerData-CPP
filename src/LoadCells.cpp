@@ -14,7 +14,7 @@ void LoadCells::initialize(int cell_number, double storedCalibration, int DTPin,
     const TickType_t xFrequency = 5000 / portTICK_PERIOD_MS; // 5000 ms de estabilización
     xLastWakeTime = xTaskGetTickCount();
 
-    Serial.print("stored Calibration factor for hound :");
+    Serial.print("stored Calibration factor for cell :");
     Serial.println(cell_number);
     Serial.println(storedCalibration);
 
@@ -22,7 +22,7 @@ void LoadCells::initialize(int cell_number, double storedCalibration, int DTPin,
     _loadCells[cell_number - 1]->begin();
 
     _loadCells[cell_number - 1]->setCalFactor(storedCalibration);
-    // _loadCells[cell_number - 1]->setCalFactor(-17.07);
+    Serial.println("Seteando cal factor de celda : " + cell_number);
 
     // Iniciar la estabilización
     bool _tare = false; // No tarear
@@ -71,7 +71,7 @@ double LoadCells::getLoadCellValue(uint8_t index, double calibrated1stRead)
             correctedData = calibrated1stRead - rawData;
         }
 
-        return correctedData;
+        return rawData;
     }
     else
     {
