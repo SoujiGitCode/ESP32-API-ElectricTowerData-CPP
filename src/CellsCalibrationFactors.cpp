@@ -5,36 +5,121 @@ Preferences preferences;
 
 CellsCalibrationFactors::CellsCalibrationFactors()
 {
-    initializePreferences();
+    // Iniciar el espacio de preferencias
+    preferences.begin("cells_Namespace", false);
+
+    // Verificar y definir valores de calibración individualmente
+    double cell_1 = preferences.getDouble("cell_1", -1);
+    if (cell_1 == -1)
+    {
+        Serial.println("cell_1 no está definido. Inicializando a 0.7...");
+        preferences.putDouble("cell_1", 0.7);
+    }
+
+    double cell_2 = preferences.getDouble("cell_2", -1);
+    if (cell_2 == -1)
+    {
+        Serial.println("cell_2 no está definido. Inicializando a 0.7...");
+        preferences.putDouble("cell_2", 0.7);
+    }
+
+    double cell_3 = preferences.getDouble("cell_3", -1);
+    if (cell_3 == -1)
+    {
+        Serial.println("cell_3 no está definido. Inicializando a 0.7...");
+        preferences.putDouble("cell_3", 0.7);
+    }
+
+    double cell_4 = preferences.getDouble("cell_4", -1);
+    if (cell_4 == -1)
+    {
+        Serial.println("cell_4 no está definido. Inicializando a 0.7...");
+        preferences.putDouble("cell_4", 0.7);
+    }
+
+    // Verificar y definir primeras lecturas individualmente
+    double first_read_1 = preferences.getDouble("first_read_1", -1);
+    if (first_read_1 == -1)
+    {
+        Serial.println("first_read_1 no está definido. Inicializando a 0.7...");
+        preferences.putDouble("first_read_1", 0.7);
+    }
+
+    double first_read_2 = preferences.getDouble("first_read_2", -1);
+    if (first_read_2 == -1)
+    {
+        Serial.println("first_read_2 no está definido. Inicializando a 0.7...");
+        preferences.putDouble("first_read_2", 0.7);
+    }
+
+    double first_read_3 = preferences.getDouble("first_read_3", -1);
+    if (first_read_3 == -1)
+    {
+        Serial.println("first_read_3 no está definido. Inicializando a 0.7...");
+        preferences.putDouble("first_read_3", 0.7);
+    }
+
+    double first_read_4 = preferences.getDouble("first_read_4", -1);
+    if (first_read_4 == -1)
+    {
+        Serial.println("first_read_4 no está definido. Inicializando a 0.7...");
+        preferences.putDouble("first_read_4", 0.7);
+    }
+
+    // Cerrar el espacio de preferencias
+    preferences.end();
 }
 
 void CellsCalibrationFactors::initializePreferences()
 {
     preferences.begin("cells_Namespace", false);
 
-    if (preferences.getBool("defaultValues", true))
+    Serial.println("Checking and setting default values for cells...");
+
+    // Verificar cada valor y establecerlo en 0.7 si no está definido
+    if (preferences.getDouble("cell_1", -1) == -1)
     {
-        Serial.println("Setting default values for cells...");
-
-        preferences.putDouble("cell_1", 99.0);
-        preferences.putDouble("cell_2", 99.0);
-        preferences.putDouble("cell_3", 99.0);
-        preferences.putDouble("cell_4", 99.0);
-
-        // Inicializar first_read_* con valores predeterminados
-        preferences.putDouble("first_read_1", 2.0);
-        preferences.putDouble("first_read_2", 3.0);
-        preferences.putDouble("first_read_3", 4.0);
-        preferences.putDouble("first_read_4", 5.0);
-
-        // Confirmar que los valores se han guardado correctamente
-        Serial.println("first_read_1 set to: " + String(preferences.getDouble("first_read_1", -1)));
-        Serial.println("first_read_2 set to: " + String(preferences.getDouble("first_read_2", -1)));
-        Serial.println("first_read_3 set to: " + String(preferences.getDouble("first_read_3", -1)));
-        Serial.println("first_read_4 set to: " + String(preferences.getDouble("first_read_4", -1)));
-
-        noMoreFactoryValues();
+        preferences.putDouble("cell_1", 0.7);
+        Serial.println("cell_1 initialized to 0.7");
     }
+    if (preferences.getDouble("cell_2", -1) == -1)
+    {
+        preferences.putDouble("cell_2", 0.7);
+        Serial.println("cell_2 initialized to 0.7");
+    }
+    if (preferences.getDouble("cell_3", -1) == -1)
+    {
+        preferences.putDouble("cell_3", 0.7);
+        Serial.println("cell_3 initialized to 0.7");
+    }
+    if (preferences.getDouble("cell_4", -1) == -1)
+    {
+        preferences.putDouble("cell_4", 0.7);
+        Serial.println("cell_4 initialized to 0.7");
+    }
+
+    // Inicializar first_read_* con 0.7 si no están definidos
+    if (preferences.getDouble("first_read_1", -1) == -1)
+    {
+        preferences.putDouble("first_read_1", 0.7);
+        Serial.println("first_read_1 initialized to 0.7");
+    }
+    if (preferences.getDouble("first_read_2", -1) == -1)
+    {
+        preferences.putDouble("first_read_2", 0.7);
+        Serial.println("first_read_2 initialized to 0.7");
+    }
+    if (preferences.getDouble("first_read_3", -1) == -1)
+    {
+        preferences.putDouble("first_read_3", 0.7);
+        Serial.println("first_read_3 initialized to 0.7");
+    }
+    if (preferences.getDouble("first_read_4", -1) == -1)
+    {
+        preferences.putDouble("first_read_4", 0.7);
+        Serial.println("first_read_4 initialized to 0.7");
+    }
+
     preferences.end();
 }
 

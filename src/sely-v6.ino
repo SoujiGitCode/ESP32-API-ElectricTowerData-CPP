@@ -11,6 +11,7 @@
 #include <MD5Builder.h>
 #include "LoadCells.h"
 #include "nvs_flash.h"
+#include "esp_task_wdt.h" // Incluir la biblioteca del watchdog
 Ticker restartTimer;
 
 // Variables de Acceso
@@ -85,6 +86,8 @@ void resetToFactoryDefaultsInterrupt()
 void initializeLoadCellsCheck(LoadCells &hound, HoundParams &params)
 {
   hound.initialize(params.cell_number, params.storedCalibration, params.DTPin, params.SCKPin);
+
+  vTaskDelay(2000 / portTICK_PERIOD_MS); // Espera 2000 ms antes de la siguie
 }
 
 // Estas tareas serán ejecutadas en el primer y segundo núcleo respectivamente
@@ -97,74 +100,43 @@ void Task1code(void *pvParameters)
     // updateLoadCellReadings()
     webSocket.loop();
     sendDataOverWebSocket(doc, webSocket, loadCells);
-    vTaskDelay(100 / portTICK_PERIOD_MS); // lee los valores cada 100 ms
+    vTaskDelay(1000 / portTICK_PERIOD_MS); // lee los valores cada 100 ms
   }
 }
 
 // Nueva función que lee los valores de las celdas de carga
-void updateLoadCellReadings()
-{
-  // vTaskDelay(100 / portTICK_PERIOD_MS); // lee los valores cada 100 ms
-  loadCellReadings[0] = first_cell.getLoadCellValue(1, loadCellfirst_read_AfterCalibration[0]);
-  Serial.print("Loadcell 1: ");
-  Serial.println(loadCellReadings[0]);
-
-  loadCellReadings[1] = second_cell.getLoadCellValue(2, loadCellfirst_read_AfterCalibration[1]);
-  Serial.print("Loadcell 2: ");
-  Serial.println(loadCellReadings[1]);
-
-  loadCellReadings[2] = third_cell.getLoadCellValue(3, loadCellfirst_read_AfterCalibration[2]);
-  Serial.print("Loadcell 3: ");
-  Serial.println(loadCellReadings[2]);
-
-  loadCellReadings[3] = fourth_cell.getLoadCellValue(4, loadCellfirst_read_AfterCalibration[3]);
-  Serial.print("Loadcell 4: ");
-  Serial.println(loadCellReadings[3]);
-}
-
-// Nueva tarea para leer regularmente los valores de las celdas de carga
 void loadCellReadingTask(void *pvParameters)
 {
   for (;;)
   {
+    Serial.println("Reading load cells...");
 
-    if (first_cell._loadCells[0] == nullptr)
-    {
-      Serial.println('celda 1 no existe');
-    }
-    if (second_cell._loadCells[0] == nullptr)
-    {
-      Serial.println('celda 2 no existe');
-    }
-    if (third_cell._loadCells[0] == nullptr)
-    {
-      Serial.println('celda 3 no existe');
-    }
-    if (fourth_cell._loadCells[0] == nullptr)
-    {
-      Serial.println('celda 4 no existe');
-    }
+    // Verificar si cada celda de carga está lista
+    double firstValue = first_cell.getLoadCellValue();
+    loadCellReadings[0] = firstValue;
+    Serial.print("Loadcell 1: ");
+    Serial.println(firstValue);
 
-    // Verificar que los punteros no sean nulos antes de usar el método update()
-    if (first_cell._loadCells[0] != nullptr)
-    {
-      first_cell._loadCells[0]->update();
-    }
-    if (second_cell._loadCells[0] != nullptr)
-    {
-      second_cell._loadCells[0]->update();
-    }
-    if (third_cell._loadCells[0] != nullptr)
-    {
-      third_cell._loadCells[0]->update();
-    }
-    if (fourth_cell._loadCells[0] != nullptr)
-    {
-      fourth_cell._loadCells[0]->update();
-    }
+    double secondValue = second_cell.getLoadCellValue();
+    loadCellReadings[1] = secondValue;
+    Serial.print("Loadcell 2: ");
+    Serial.println(secondValue);
 
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    updateLoadCellReadings();
+    double thirdValue = third_cell.getLoadCellValue();
+    loadCellReadings[2] = thirdValue;
+    Serial.print("Loadcell 3: ");
+    Serial.println(thirdValue);
+
+    double fourthValue = fourth_cell.getLoadCellValue();
+    loadCellReadings[3] = fourthValue;
+    Serial.print("Loadcell 4: ");
+    Serial.println(fourthValue);
+
+    // Resetea el watchdog manualmente para evitar reinicios
+    esp_task_wdt_reset();
+
+    // Espera antes de la siguiente lectura
+    vTaskDelay(1000 / portTICK_PERIOD_MS); // Esperar 1000 ms
   }
 }
 
@@ -174,11 +146,10 @@ void setup()
   esp_err_t err = nvs_flash_init();
   if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
   {
-    // Si hay un error, borramos la partición NVS y la volvemos a inicializar
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    err = nvs_flash_init();
+    ESP_ERROR_CHECK(nvs_flash_erase()); // Borrar NVS si es necesario
+    err = nvs_flash_init();             // Inicializar de nuevo
   }
-  ESP_ERROR_CHECK(err);
+  ESP_ERROR_CHECK(err); // Comprobar si hay errores
   // Instanciar CellsCalibrationFactors (esto debería ejecutar el constructor)
   CellsCalibrationFactors Cells;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -188,18 +159,6 @@ void setup()
   Serial.begin(115200);
   vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-  // Se cargan los valores de las primeras lecturas en las celdas de carga almacenados
-  loadCellfirst_read_AfterCalibration[0] = Cells.get_first_read_1();
-  loadCellfirst_read_AfterCalibration[1] = Cells.get_first_read_2();
-  loadCellfirst_read_AfterCalibration[2] = Cells.get_first_read_3();
-  loadCellfirst_read_AfterCalibration[3] = Cells.get_first_read_4();
-
-  //--------------------Numero de Celda, Calibration Factor, DT Pin, SKC Pin-----------------//
-  HoundParams first_cellParams = {1, Cells.get_first_cell(), 17, 5}; // Reemplaza estos valores con los parámetros reales de cada 'hound'
-  HoundParams second_cellParams = {2, Cells.get_second_cell(), 16, 4};
-  HoundParams third_cellParams = {3, Cells.get_third_cell(), 26, 27};
-  HoundParams fourth_cellParams = {4, Cells.get_fourth_cell(), 14, 12};
-  //-------------------------------------------------------//
   // antiCloneFunction(chipIDHashed); // Llamar a la función antiClone
 
   const char *ssid = config.getSsid();
@@ -236,6 +195,19 @@ void setup()
   Serial.print("Calibration factor before constructor: ");
   Serial.println(calibrationFactor);
 
+  // Se cargan los valores de las primeras lecturas en las celdas de carga almacenados
+  loadCellfirst_read_AfterCalibration[0] = Cells.get_first_read_1();
+  loadCellfirst_read_AfterCalibration[1] = Cells.get_first_read_2();
+  loadCellfirst_read_AfterCalibration[2] = Cells.get_first_read_3();
+  loadCellfirst_read_AfterCalibration[3] = Cells.get_first_read_4();
+
+  //--------------------Numero de Celda, Calibration Factor, DT Pin, SKC Pin-----------------//
+  HoundParams first_cellParams = {1, Cells.get_first_cell(), 17, 5}; // Reemplaza estos valores con los parámetros reales de cada 'hound'
+  HoundParams second_cellParams = {2, Cells.get_second_cell(), 16, 4};
+  HoundParams third_cellParams = {3, Cells.get_third_cell(), 26, 27};
+  HoundParams fourth_cellParams = {4, Cells.get_fourth_cell(), 14, 12};
+  //-------------------------------------------------------//
+
   // Llamada a la función initializeLoadCellsCheck
   initializeLoadCellsCheck(first_cell, first_cellParams);
   initializeLoadCellsCheck(second_cell, second_cellParams);
@@ -244,9 +216,7 @@ void setup()
 
   // DEfinicion de tareas en nucleo 0 y 1
   xTaskCreatePinnedToCore(Task1code, "Task1", 20000, NULL, 1, &Task1, 1);
-
-  // xTaskCreatePinnedToCore(loadCellReadingTask, "LoadCellReadingTask", 10000, NULL, 1, NULL, 0);
-  xTaskCreatePinnedToCore(loadCellReadingTask, "LoadCellReadingTask", 20000, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(loadCellReadingTask, "LoadCellReadingTask", 10000, NULL, 1, NULL, 0);
 }
 void loop()
 {

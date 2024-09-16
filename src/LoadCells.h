@@ -2,7 +2,7 @@
 #define LoadCells_h
 
 #include "Arduino.h"
-#include "HX711_ADC.h"
+#include "HX711.h"
 
 extern double loadCellReadings[4];
 
@@ -11,10 +11,10 @@ class LoadCells
 public:
     LoadCells();
     void initialize(int cell_number, double storedCalibration, int DTPin, int SCKPin);
-    double getLoadCellValue(uint8_t index, double calibrated1stRead);
-    HX711_ADC *_loadCells[4];
+    double getLoadCellValue();
 
 private:
+    HX711 *_loadCell; // Ahora solo tienes un puntero a HX711 por instancia
     double _calibrationFactor;
 };
 

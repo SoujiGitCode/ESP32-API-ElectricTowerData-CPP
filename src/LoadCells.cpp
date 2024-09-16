@@ -1,80 +1,61 @@
 #include "LoadCells.h"
 #include "CellsCalibrationFactors.h"
+#include "esp_task_wdt.h"
 
 extern CellsCalibrationFactors Cells;
 
-LoadCells::LoadCells()
+LoadCells::LoadCells() : _loadCell(nullptr)
 {
-    Serial.println("Loadcells constructor being called");
+    Serial.println("Loadcell constructor being called");
 }
 
 void LoadCells::initialize(int cell_number, double storedCalibration, int DTPin, int SCKPin)
 {
-    TickType_t xLastWakeTime;
-    const TickType_t xFrequency = 5000 / portTICK_PERIOD_MS; // 5000 ms de estabilización
-    xLastWakeTime = xTaskGetTickCount();
-
-    Serial.print("stored Calibration factor for cell :");
+    Serial.print("Initializing load cell number: ");
     Serial.println(cell_number);
-    Serial.println(storedCalibration);
 
-    _loadCells[cell_number - 1] = new HX711_ADC(DTPin, SCKPin);
-    _loadCells[cell_number - 1]->begin();
-
-    _loadCells[cell_number - 1]->setCalFactor(storedCalibration);
-    Serial.println("Seteando cal factor de celda : " + cell_number);
-
-    // Iniciar la estabilización
-    bool _tare = false; // No tarear
-    _loadCells[cell_number - 1]->start(xFrequency, _tare);
-    if (_loadCells[cell_number - 1]->getTareTimeoutFlag())
+    _loadCell = new HX711(); // Crea el objeto HX711 dinámicamente
+    if (_loadCell == nullptr)
     {
-        Serial.println("Timeout, check MCU > HX711 wiring and pin designations");
+        Serial.println("Error: No se pudo crear el objeto HX711.");
+        return;
     }
 
-    vTaskDelayUntil(&xLastWakeTime, xFrequency); // Esperar la estabilización
+    _loadCell->begin(DTPin, SCKPin);
+    Serial.println("Pines inicializados.");
 
-    _loadCells[cell_number - 1]->update();
+    _calibrationFactor = storedCalibration;
+    _loadCell->set_scale(_calibrationFactor);
+    Serial.println("Factor de calibración configurado.");
 
-    if (!_loadCells[cell_number - 1]->update())
+    // Añadir un retraso adicional para permitir que la celda se estabilice
+    delay(1000);
+
+    if (_loadCell->wait_ready_timeout(5000))
     {
-        Serial.print("loadcell is not ready. Number:");
+        loadCellReadings[cell_number - 1] = _loadCell->get_units(10); // Obtener la lectura
+        Serial.print("Lectura inicial de la celda ");
         Serial.println(cell_number);
-        loadCellReadings[cell_number - 1] = _loadCells[cell_number - 1]->getData();
     }
     else
     {
-        Serial.print("loadcell is ready. Number:");
-        Serial.println(cell_number);
-        loadCellReadings[cell_number - 1] = _loadCells[cell_number - 1]->getData();
+        Serial.print("La celda ");
+        Serial.print(cell_number);
+        Serial.println(" no está lista después del tiempo de espera.");
+        _loadCell = nullptr; // Marca esta celda como no válida
     }
 }
 
-double LoadCells::getLoadCellValue(uint8_t index, double calibrated1stRead)
+double LoadCells::getLoadCellValue()
 {
-    if (index >= 1 && index <= 4)
+    if (_loadCell != nullptr && _loadCell->is_ready())
     {
-        // Obtiene el valor crudo
-        double rawData = _loadCells[index - 1]->getData();
-
-        // Asegurarse de que rawData sea positivo
-        rawData = fabs(rawData);
-
-        // Resta siempre el mayor valor al menor
-        double correctedData;
-        if (rawData > calibrated1stRead)
-        {
-            correctedData = rawData - calibrated1stRead;
-        }
-        else
-        {
-            correctedData = calibrated1stRead - rawData;
-        }
-
+        double rawData = _loadCell->get_units(10); // Obtener promedio de 10 lecturas
         return rawData;
     }
     else
     {
+        Serial.println("Celda de carga no está lista o no inicializada.");
         return NAN;
     }
 }
