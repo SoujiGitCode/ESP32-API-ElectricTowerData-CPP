@@ -9,7 +9,7 @@ LoadCells::LoadCells() : _loadCell(nullptr)
     Serial.println("Loadcell constructor being called");
 }
 
-void LoadCells::initialize(int cell_number, double storedCalibration, int DTPin, int SCKPin)
+void LoadCells::initialize(int cell_number, float storedCalibration, float storedRead, int DTPin, int SCKPin)
 {
     Serial.print("Initializing load cell number: ");
     Serial.println(cell_number);
@@ -24,12 +24,30 @@ void LoadCells::initialize(int cell_number, double storedCalibration, int DTPin,
     _loadCell->begin(DTPin, SCKPin);
     Serial.println("Pines inicializados.");
 
-    _calibrationFactor = storedCalibration;
-    _loadCell->set_scale(_calibrationFactor);
-    Serial.println("Factor de calibración configurado.");
+    // Verificar si el factor de calibración es válido antes de asignarlo
+    if (storedCalibration <= 0.0)
+    {
+        Serial.println("Advertencia: El factor de calibración almacenado es inválido o no definido.");
+        _calibrationFactor = 1.0; // Asigna un valor predeterminado de 1.0
+    }
+    else
+    {
 
+        _calibrationFactor = storedCalibration;
+    }
+
+    _loadCell->set_scale(_calibrationFactor);
+    Serial.print("Factor de calibración configurado para celda numero: ");
+    Serial.println(cell_number);
+    float getCalibrationFactor = _loadCell->get_scale();
+    Serial.print("getScale:de celda ");
+    Serial.print(getCalibrationFactor);
+
+    _loadCell->set_offset(storedRead);
+    Serial.print("Seteado de offset  : ");
+    Serial.print(storedRead);
     // Añadir un retraso adicional para permitir que la celda se estabilice
-    delay(1000);
+    vTaskDelay(1000 / portTICK_PERIOD_MS); // lee los valores cada 1000 ms
 
     if (_loadCell->wait_ready_timeout(5000))
     {
@@ -51,7 +69,12 @@ double LoadCells::getLoadCellValue()
     if (_loadCell != nullptr && _loadCell->is_ready())
     {
         double rawData = _loadCell->get_units(10); // Obtener promedio de 10 lecturas
-        return rawData;
+        if (rawData == INFINITY)
+        {
+            Serial.println("Error: Lectura retornó infinito.");
+            return NAN;
+        }
+        return fabs(rawData);
     }
     else
     {

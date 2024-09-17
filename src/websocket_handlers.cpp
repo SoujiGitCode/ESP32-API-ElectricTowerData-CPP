@@ -7,7 +7,7 @@ double gramosANewtons(double gramos)
   const double g = 9.81;             // Aceleración debida a la gravedad en m/s^2
   double masaEnKg = gramos / 1000.0; // Convertir gramos a kilogramos
   double fuerza = masaEnKg * g;      // Calcular la fuerza (tensión) en newtons
-  return 22;
+  return fuerza;
 }
 
 void webSocketEvent(WebSocketsServer &webSocket, uint8_t num, WStype_t type, uint8_t *payload, size_t length)

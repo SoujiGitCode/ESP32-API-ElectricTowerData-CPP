@@ -82,7 +82,7 @@ void Config::resetToFactoryDefaults()
 
     // Restablecer el flag 'defaultValues' en 'cells_Namespace'
     preferences.begin("cells_Namespace", false);
-    preferences.putBool("defaultValues", true); // Aseguramos que se inicialicen los valores por defecto
+    // preferences.putBool("defaultValues", true); // Aseguramos que se inicialicen los valores por defecto
     preferences.end();
 
     Serial.println("Factory reset completed.");
