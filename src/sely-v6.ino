@@ -91,7 +91,7 @@ void initializeLoadCellsCheck(LoadCells &cell, HoundParams &params)
 {
   cell.initialize(params.cell_number, params.storedCalibration, params.storedRead, params.DTPin, params.SCKPin);
 
-  vTaskDelay(2000 / portTICK_PERIOD_MS); // Espera 2000 ms antes de la siguie
+  vTaskDelay(1000 / portTICK_PERIOD_MS); // Espera 2000 ms antes de la siguie
 }
 
 // Estas tareas serán ejecutadas en el primer y segundo núcleo respectivamente
@@ -168,7 +168,7 @@ void loadCellReadingTask(void *pvParameters)
     esp_task_wdt_reset();
 
     // Espera antes de la siguiente lectura
-    vTaskDelay(1000 / portTICK_PERIOD_MS); // Esperar 1000 ms
+    vTaskDelay(100 / portTICK_PERIOD_MS); // Esperar 1000 ms
   }
 }
 
@@ -244,7 +244,7 @@ void setup()
   HoundParams fourth_cellParams = {4, Cells.get_fourth_cell(), Cells.get_first_read_4(), 14, 12};
   //-------------------------------------------------------//
 
-  // delay(3000);
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
   // Llamada a la función initializeLoadCellsCheck
   initializeLoadCellsCheck(first_cell, first_cellParams);
   initializeLoadCellsCheck(second_cell, second_cellParams);
