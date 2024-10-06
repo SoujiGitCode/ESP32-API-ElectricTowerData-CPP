@@ -294,14 +294,14 @@ void handleToggleLed(AsyncWebServerRequest *request)
     String ledState = request->getParam("led", true)->value();
     if (ledState == "true")
     {
-      digitalWrite(ledPin, HIGH);
+      digitalWrite(ledPin, LOW);
       AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"status\": \"success\", \"message\": \"LED encendido\"}");
       resp->addHeader("Access-Control-Allow-Origin", "*");
       request->send(resp);
     }
     else if (ledState == "false")
     {
-      digitalWrite(ledPin, LOW);
+      digitalWrite(ledPin, HIGH);
       AsyncWebServerResponse *resp = request->beginResponse(200, "application/json", "{\"status\": \"success\", \"message\": \"LED apagado\"}");
       resp->addHeader("Access-Control-Allow-Origin", "*");
       request->send(resp);

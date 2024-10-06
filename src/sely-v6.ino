@@ -188,7 +188,7 @@ void setup()
 
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   pinMode(ledPin, OUTPUT);   // Configuracion inicial del PIN
-  digitalWrite(ledPin, LOW); // asegurar que el LED esté apagado al inicio
+  digitalWrite(ledPin, HIGH); // asegurar que el LED esté apagado al inicio
 
   Serial.begin(115200);
   preferences.begin("cells_Namespace", false);

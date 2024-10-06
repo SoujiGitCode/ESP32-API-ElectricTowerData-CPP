@@ -50,3 +50,13 @@ Si deseas cargar archivos como **HTML, CSS, JavaScript** u otros archivos estát
 
 ```bash
 pio run --target uploadfs
+
+```
+### 6. Se puede ejecutar el  shortcut go y go -u : go compila, sube el sketch y abre el serial monitor  // go -u sube los archivos de la web - spiff
+
+```bash
+go
+
+go -u
+
+```
